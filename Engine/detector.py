@@ -4,7 +4,7 @@
 #
 # Architecture decision:
 #   Each detector is an independent class that inherits from BaseDetector.
-#   This follows the Open/Closed Principle — the system is open for extensions
+#   This follows the Open/Closed Principle, the system is open for extensions
 #   (adding new detectors) and modifications without requiring changes to the 
 #   existing scoring logic. 
 #
@@ -294,7 +294,7 @@ class ContentDetector(BaseDetector):
         r'\bfull (name|address).{0,20}(confirm|verify|provide)\b',
     ]
 
-    # Language mismatch patterns — phrasing unusual for native English
+    # Language mismatch patterns, phrasing unusual for native English
     LANGUAGE_MISMATCH_PATTERNS = [
         r'\bdear (valued|esteemed) (customer|client|user|member)\b',
         r'\bkindly (click|confirm|verify|provide|update)\b',
@@ -318,16 +318,16 @@ class ContentDetector(BaseDetector):
         sensitive_hits = self._count_matches(self.SENSITIVE_INFO_PATTERNS, full_text)
         if sensitive_hits >= 1:
             flags.append("Requests personal data, legitimate companies never ask for passwords, card numbers, or IDs over email")
-            score += 40
+            score += 160
 
         # financial scam 
         bank_hits = self._count_matches(self.BANK_SCAM_PHRASES, full_text)
         if bank_hits >= 2:
             flags.append("This email uses tactics common in fake bank or credit card alerts")
-            score += 50
+            score += 100
         elif bank_hits == 1:
             flags.append("Possible financial scam, some language resembles fake payment or banking alerts")
-            score += 20
+            score += 40
 
         # urgancey phrases used
         urgency_hits = self._count_matches(self.URGENCY_PHRASES, full_text)
@@ -344,10 +344,10 @@ class ContentDetector(BaseDetector):
         tech_hits = self._count_matches(self.TECH_SUPPORT_SCAM, full_text)
         if tech_hits >= 2:
             flags.append("This email tries to convince you your device is infected or in danger")
-            score += 50
+            score += 100
         elif tech_hits == 1:
             flags.append("Possible tech scam, some language in this email resembles fake tech support messages")
-            score += 20
+            score += 40
 
         # Language mismatch (weakest signal)
         lang_hits = self._count_matches(self.LANGUAGE_MISMATCH_PATTERNS, full_text)
@@ -430,7 +430,7 @@ class LinkDetector(BaseDetector):
               f"Suspicious link domain — this email links to a web address commonly associated with scams: "
                  f"{', '.join(set(suspicious_tld))}"
               )
-            score += 35
+            score += 70
 
         # URL shorteners 
         shorteners_found = [
@@ -442,7 +442,7 @@ class LinkDetector(BaseDetector):
                 f"Link destination hidden, one or more links use a shortener that conceals where you will actually land: "
                 f"{', '.join(set(shorteners_found))}"
             )
-            score += 40
+            score += 80
 
         # Dangerous file extensions 
         dangerous = [
@@ -454,7 +454,7 @@ class LinkDetector(BaseDetector):
                 f"Dangerous download link, this email links directly to a file that could harm your device: "
                 f"{', '.join(dangerous)}"
             )
-            score += 50
+            score += 100
 
         # Excessive link count 
         if url_count > 5:

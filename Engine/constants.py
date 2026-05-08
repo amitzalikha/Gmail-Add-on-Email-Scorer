@@ -31,5 +31,5 @@ TRUST_DAMPENING_FACTOR = 0.6
 # Any score of 65 or higher is labeled as a direct threat
 THRESHOLD_MALICIOUS   = 65
 
-# Any score between 30 and 64 is labeled as a warning
-THRESHOLD_SUSPICIOUS  = 30
+# Any score between 20 and 64 is labeled as a warning
+THRESHOLD_SUSPICIOUS  = 20
