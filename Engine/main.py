@@ -70,7 +70,7 @@ async def analyze_email(request: EmailAnalysisRequest):
 
 # ─── EXECUTION ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # Run the server (default port 8000)
+    # Run the server 
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 

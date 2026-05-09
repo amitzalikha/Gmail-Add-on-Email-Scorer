@@ -16,7 +16,7 @@ class EmailThreatScorer:
         """
         results: Dict[str, DetectionResult] = {}
         
-        # 1. Run all detectors and collect results
+        # Run all detectors and collect results
         for detector in self.detectors:
             res = detector.analyze(
                 subject=email_data.get("subject", ""),
@@ -27,12 +27,11 @@ class EmailThreatScorer:
                 dkim=email_data.get("dkim")
             )
             
-            # Normalize detector names to match WEIGHTS keys (e.g., "Links & URLs" -> "links_urls")
+            # Normalize detector names to match WEIGHTS keys 
             key = res.detector_name.lower().replace(" & ", "_").replace(" ", "_")
             results[key] = res
 
-        # 2. Calculate the weighted total score
-        # Trust dampening has been removed. All signals are now calculated at full weight.
+        # Calculate the weighted total score
         total_weighted_score = 0.0
         
         for category, weight in WEIGHTS.items():
@@ -43,26 +42,24 @@ class EmailThreatScorer:
                 
             raw_score = results[res_key].risk_score
             
-            # Calculate the score for this category based on its importance (weight)
+            # Calculate the score for this category based on its weight
             total_weighted_score += (raw_score * weight)
 
-        # 3. Apply Compounding Bonus
         # When multiple independent detectors fire, the overall risk increases because 
-        # independent signals are converging on a potential threat.
+        # independent signals are converging on a potential threat so add to it accordingly
         detectors_fired = sum(1 for r in results.values() if r.risk_score > 0)
         
         if detectors_fired >= 4:
-            total_weighted_score *= 1.35   # 35% boost for 4+ signals
+            total_weighted_score *= 1.35   
         elif detectors_fired >= 3:
-            total_weighted_score *= 1.20   # 20% boost for 3 signals
+            total_weighted_score *= 1.20   
         elif detectors_fired >= 2:
-            total_weighted_score *= 1.10   # 10% boost for 2 signals
+            total_weighted_score *= 1.10   
 
-        # Final score calculation—rounded up to ensure even small threats are surfaced
+        # Final score calculation, rounded up to ensure even small threats are surfaced
         final_score = min(math.ceil(total_weighted_score), 100)
         
-        # 4. Prepare the display order for the UI breakdown
-        # We prioritize content and identity first as they are most readable for users.
+        # Prepare the display order 
         DISPLAY_ORDER = [
             "content_urgency",
             "sender_identity",
@@ -86,7 +83,7 @@ class EmailThreatScorer:
         return {
             "score": final_score,
             "verdict": self._get_verdict(final_score, results),
-            "trust_applied": False, # Trust dampening logic deactivated
+            "trust_applied": False, 
             "breakdown": ordered_breakdown,
         }
 
@@ -100,11 +97,13 @@ class EmailThreatScorer:
         if score >= THRESHOLD_SUSPICIOUS:
             return "SUSPICIOUS"
             
-        # High Confidence Override:
-        # If any single detector is extremely confident (>=60) and the score is non-trivial (>=25),
-        # we escalate the verdict to SUSPICIOUS even if the total weighted score is low.
-        high_confidence_hit = any(r.risk_score >= 60 for r in results.values())
-        if high_confidence_hit and score >= 25:
+      # Auth failure alone is too noisy, self sent and forwarded emails
+      # often fail SPF/DKIM but are completely harmless.
+      # So we only escalate to SUSPICIOUS if at least one other detector
+      # (content, links, sender,...) fires at high confidence (≥60).
+        non_auth_results = {k: v for k, v in results.items() if k != "authentication"}
+        high_confidence_non_auth = any(r.risk_score >= 60 for r in non_auth_results.values())
+        if high_confidence_non_auth and score >= 25:
             return "SUSPICIOUS"
             
         return "SAFE"

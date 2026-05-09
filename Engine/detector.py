@@ -91,7 +91,7 @@ class AuthenticationDetector(BaseDetector):
             passed.append("Sender verified, this email came from a server authorised by the domain owner")
         else:
             flags.append("Sender not verified, anyone could be pretending to be this person or company")
-            score += 50
+            score += 35
         
         # DKIM check
         # If the signature exists and is long enough to be real
@@ -100,7 +100,7 @@ class AuthenticationDetector(BaseDetector):
         # If the signature is missing or looks fake
         else:
             flags.append("No digital signature, we can't confirm if this message was altered or changed after it was sent")
-            score += 40
+            score += 25
             
         # return the results 
         return DetectionResult(
@@ -318,7 +318,7 @@ class ContentDetector(BaseDetector):
         sensitive_hits = self._count_matches(self.SENSITIVE_INFO_PATTERNS, full_text)
         if sensitive_hits >= 1:
             flags.append("Requests personal data, legitimate companies never ask for passwords, card numbers, or IDs over email")
-            score += 160
+            score += 180
 
         # financial scam 
         bank_hits = self._count_matches(self.BANK_SCAM_PHRASES, full_text)
@@ -327,7 +327,7 @@ class ContentDetector(BaseDetector):
             score += 100
         elif bank_hits == 1:
             flags.append("Possible financial scam, some language resembles fake payment or banking alerts")
-            score += 40
+            score += 45
 
         # urgancey phrases used
         urgency_hits = self._count_matches(self.URGENCY_PHRASES, full_text)
@@ -344,10 +344,10 @@ class ContentDetector(BaseDetector):
         tech_hits = self._count_matches(self.TECH_SUPPORT_SCAM, full_text)
         if tech_hits >= 2:
             flags.append("This email tries to convince you your device is infected or in danger")
-            score += 100
+            score += 40
         elif tech_hits == 1:
             flags.append("Possible tech scam, some language in this email resembles fake tech support messages")
-            score += 40
+            score += 25
 
         # Language mismatch (weakest signal)
         lang_hits = self._count_matches(self.LANGUAGE_MISMATCH_PATTERNS, full_text)
