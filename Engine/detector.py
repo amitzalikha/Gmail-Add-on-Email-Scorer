@@ -222,7 +222,9 @@ class SenderDetector(BaseDetector):
 #   - Bank or credit card scam language
 #   - General urgency phrases
 #   - Language mismatch (email claims to be from English business
-#     but contains patterns typical of non-native writing)
+#   - but contains patterns typical of non-native writing)
+#   - CEO fraud
+#   - Delivery scam 
 
 class ContentDetector(BaseDetector):
 
@@ -307,6 +309,32 @@ class ContentDetector(BaseDetector):
         r'\bbefore \d+ hours\b',
     ]
 
+    # Attacker impersonates a CEO or manager to request urgent wire transfers
+    CEO_FRAUD_PATTERNS = [
+        r'\b(are you available|are you there|are you free).{0,20}(right now|now|today)\b',
+        r'\bi need you to (handle|process|take care of|do something)\b',
+        r'\bcan you (help me with|do me a favor|handle something)\b',
+        r'\bkeep this (between us|confidential|quiet|private)\b',
+        r'\bdon\'?t (tell|mention|share).{0,20}(anyone|anyone else|the team)\b',
+        r'\bi\'?m (in a meeting|travelling|out of office|unavailable).{0,30}(call|email|reach)\b',
+        r'\b(process|make|send|transfer).{0,20}(payment|wire|transfer|funds)\b',
+        r'\bi\'?ll (explain|tell you|fill you in) later\b',
+        r'\bthis is (urgent|time.sensitive|confidential|top priority)\b',
+        r'\b(wire|bank) transfer.{0,20}(today|now|immediately|asap)\b',
+        r'\bpurchase.{0,20}(gift card|itunes|google play|amazon).{0,20}(send|forward|share)\b',
+    ]
+
+    # Delivery scam patterns
+    DELIVERY_SCAM_PATTERNS = [
+        r'\b(package|parcel|delivery|shipment).{0,30}(failed|held|pending|on hold|waiting)\b',
+        r'\b(reschedule|rearrange).{0,20}(delivery|shipment)\b',
+        r'\bcustoms (fee|charge|clearance|duty).{0,30}(required|pay|pending)\b',
+        r'\bdelivery (fee|charge|cost).{0,20}(required|unpaid|pending)\b',
+        r'\byour (package|parcel|order).{0,30}(cannot|could not).{0,20}(deliver|complete)\b',
+        r'\btrack.{0,10}(your|the).{0,10}(package|parcel|shipment|order)\b',
+        r'\b(dhl|fedex|ups|usps|royal mail).{0,30}(notification|alert|delivery|package)\b',
+    ]
+
     def analyze(self, subject, sender, reply_to, body, spf, dkim) -> DetectionResult:
         flags  = []
         passed = []
@@ -318,25 +346,25 @@ class ContentDetector(BaseDetector):
         sensitive_hits = self._count_matches(self.SENSITIVE_INFO_PATTERNS, full_text)
         if sensitive_hits >= 1:
             flags.append("Requests personal data, legitimate companies never ask for passwords, card numbers, or IDs over email")
-            score += 180
+            score += 90
 
         # financial scam 
         bank_hits = self._count_matches(self.BANK_SCAM_PHRASES, full_text)
         if bank_hits >= 2:
             flags.append("This email uses tactics common in fake bank or credit card alerts")
-            score += 100
+            score += 75
         elif bank_hits == 1:
             flags.append("Possible financial scam, some language resembles fake payment or banking alerts")
-            score += 45
+            score += 50
 
         # urgancey phrases used
         urgency_hits = self._count_matches(self.URGENCY_PHRASES, full_text)
         if urgency_hits >= 3:
             flags.append("High-pressure language, may be suspicious")
-            score += 35
+            score += 45
         elif urgency_hits >= 1:
             flags.append("Urgent tone, this email is pushing you to act quickly")
-            score += 15
+            score += 20
         else:
             passed.append("No pressure tactics detected, the tone of this email seems normal")
 
@@ -358,6 +386,29 @@ class ContentDetector(BaseDetector):
         elif lang_hits == 1:
             flags.append("Slightly unusual wording, some phrases sound unnatural for a legitimate business")
             score += 5
+
+        # CEO fraud 
+        ceo_hits = self._count_matches(self.CEO_FRAUD_PATTERNS, full_text)
+        if ceo_hits >= 2:
+            flags.append("Someone may be impersonating a manager or executive to request money or sensitive actions")
+            score += 70
+        elif ceo_hits == 1:
+            flags.append("Possible business email compromise, email uses language common in CEO fraud attacks")
+            score += 35
+
+        # Delivery scam
+        delivery_hits = self._count_matches(self.DELIVERY_SCAM_PATTERNS, full_text)
+        if delivery_hits >= 2:
+            flags.append("Delivery scam language detected, fake courier notifications often ask for fees or personal details")
+            score += 45
+        elif delivery_hits == 1:
+            flags.append("Possible delivery scam")
+            score += 20
+
+
+
+
+
 
         # return the results
         return DetectionResult(
@@ -430,7 +481,7 @@ class LinkDetector(BaseDetector):
               f"Suspicious link domain — this email links to a web address commonly associated with scams: "
                  f"{', '.join(set(suspicious_tld))}"
               )
-            score += 70
+            score += 55
 
         # URL shorteners 
         shorteners_found = [
@@ -442,7 +493,7 @@ class LinkDetector(BaseDetector):
                 f"Link destination hidden, one or more links use a shortener that conceals where you will actually land: "
                 f"{', '.join(set(shorteners_found))}"
             )
-            score += 80
+            score += 60
 
         # Dangerous file extensions 
         dangerous = [

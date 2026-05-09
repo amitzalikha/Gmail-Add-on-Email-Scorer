@@ -6,12 +6,12 @@ WEIGHTS = {
     "links_urls":       0.35,
 
 
-    #If an email fails its technical ID check (SPF/DKIM), it is objectively untrustworthy
-    "authentication":   0.25,
-
-
     # Urgent language is a clue, but can also be found in legitimate emails
-    "content_urgency":  0.20,
+    "content_urgency":  0.30,
+
+
+     #If an email fails its technical ID check (SPF/DKIM), it is objectively untrustworthy
+    "authentication":   0.15,
 
 
     # Identity spoofing is important but often overlaps with authentication failures
