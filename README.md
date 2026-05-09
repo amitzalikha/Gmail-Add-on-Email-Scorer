@@ -39,7 +39,8 @@ FastAPI Backend (main.py)
           ▼
     JSON Response → Gmail Add-on Panel
 
-     
+     ---
+
 __Backend (Python / FastAPI)__
 The backend runs in a Docker container and exposes a single endpoint: POST /analyze. It receives the email data from the Gmail Add-on, runs it through 5 independent detectors, and returns a score with a full breakdown.
 
@@ -83,12 +84,16 @@ When multiple independent detectors fire at the same time, the total score gets 
 
 
 
+### **4. Final Verdict**
+The final risk level is determined based on the total weighted score:
 
-__4. Verdict__
-ScoreVerdict:
-0 - 24 ✅ SAFE
-25 - 59 ⚠️ SUSPICIOUS
-65 - 100 🚨 MALICIOUS
+| Score Range | Verdict | Action / Icon |
+| :--- | :--- | :---: |
+| **0 - 24** | **SAFE** | ✅ |
+| **25 - 59** | **SUSPICIOUS** | ⚠️ |
+| **60 - 100** | **MALICIOUS** | 🚨 |
+
+---
    
 A SUSPICIOUS escalation also triggers if any non-authentication detector scores ≥ 60 and the total is ≥ 25, even if the weighted total is below the threshold. 
 
