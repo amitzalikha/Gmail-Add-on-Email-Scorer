@@ -65,22 +65,20 @@ class EmailThreatScorer:
             # Active categories = those not empty
             active = [c for c in WEIGHTS if c not in empty_categories]
 
-            if active:
-                # 60% of freed weight goes to content_urgency (deepest analysis)
-                content_bonus = 0.0
-                if "content_urgency" in active:
-                    content_bonus = round(freed * 0.6, 3)
-                    effective_weights["content_urgency"] += content_bonus
+        if active:
+            content_bonus = 0.0
+            if "content_urgency" in active:
+                content_bonus = round(freed * 0.6, 3)
+                effective_weights["content_urgency"] += content_bonus
 
-                # Remaining 40% split equally among other active categories
-                remaining = freed - content_bonus
-                # Freed weight goes only to content and sender/links if active
-                redistributable = [c for c in other_active 
-                                if c not in ("authentication", "homoglyph")]
-                if redistributable:
-                    per_cat = round(remaining / len(redistributable), 3)
-                    for c in redistributable:
-                        effective_weights[c] += per_cat 
+            remaining = freed - content_bonus
+            other_active = [c for c in active if c != "content_urgency"]
+            redistributable = [c for c in other_active
+                            if c not in ("authentication", "homoglyph")]
+            if redistributable:
+                per_cat = round(remaining / len(redistributable), 3)
+                for c in redistributable:
+                    effective_weights[c] += per_cat
 
         # Calculate the weighted total score using effective weights
         total_weighted_score = 0.0
