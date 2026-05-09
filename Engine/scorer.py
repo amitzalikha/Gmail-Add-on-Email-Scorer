@@ -24,7 +24,9 @@ class EmailThreatScorer:
                 reply_to=email_data.get("reply_to"),
                 body=email_data.get("body", ""),
                 spf=email_data.get("spf"),
-                dkim=email_data.get("dkim")
+                dkim=email_data.get("dkim"),
+                safe_browsing_key=email_data.get("safe_browsing_key", "")
+
             )
             
             # Normalize detector names to match WEIGHTS keys 
@@ -34,15 +36,61 @@ class EmailThreatScorer:
         # Calculate the weighted total score
         total_weighted_score = 0.0
         
-        for category, weight in WEIGHTS.items():
-            # Find the result key that matches the current category weight
+        # Dynamic weight redistribution
+        # If a detector has no data to analyze (e.g. no URLs in the email,
+        # body is empty), its score will be 0 and it contributes nothing.
+        # Instead of wasting that weight, we redistribute it to active
+        # detectors so the final score reflects what was actually analyzed.
+    
+        # Find which detectors have no data at all (score=0 AND no flags)
+        empty_categories = set()
+        for category in WEIGHTS:
+            res_key = next((k for k in results.keys() if category in k), None)
+            if res_key:
+                r = results[res_key]
+                if r.risk_score == 0 and len(r.flags) == 0:
+                    empty_categories.add(category)
+
+        # Build effective weights, start as a copy of base weights
+        effective_weights = dict(WEIGHTS)
+
+        if empty_categories:
+            # Total weight freed from empty categories
+            freed = sum(WEIGHTS[c] for c in empty_categories)
+
+            # Zero out the empty categories
+            for c in empty_categories:
+                effective_weights[c] = 0.0
+
+            # Active categories = those not empty
+            active = [c for c in WEIGHTS if c not in empty_categories]
+
+            if active:
+                # 60% of freed weight goes to content_urgency (deepest analysis)
+                content_bonus = 0.0
+                if "content_urgency" in active:
+                    content_bonus = round(freed * 0.6, 3)
+                    effective_weights["content_urgency"] += content_bonus
+
+                # Remaining 40% split equally among other active categories
+                remaining = freed - content_bonus
+                # Freed weight goes only to content and sender/links if active
+                redistributable = [c for c in other_active 
+                                if c not in ("authentication", "homoglyph")]
+                if redistributable:
+                    per_cat = round(remaining / len(redistributable), 3)
+                    for c in redistributable:
+                        effective_weights[c] += per_cat 
+
+        # Calculate the weighted total score using effective weights
+        total_weighted_score = 0.0
+
+        for category, weight in effective_weights.items():
             res_key = next((k for k in results.keys() if category in k), None)
             if not res_key:
                 continue
-                
+
             raw_score = results[res_key].risk_score
-            
-            # Calculate the score for this category based on its weight
             total_weighted_score += (raw_score * weight)
 
         # When multiple independent detectors fire, the overall risk increases because 
@@ -55,6 +103,15 @@ class EmailThreatScorer:
             total_weighted_score *= 1.20   
         elif detectors_fired >= 2:
             total_weighted_score *= 1.10   
+
+        # If Safe Browsing confirmed a malicious URL, add flat penalty
+        api_confirmed = any(
+            "google safe browsing confirmed" in flag.lower()
+            for r in results.values()
+            for flag in r.flags
+        )
+        if api_confirmed:
+            total_weighted_score += 60
 
         # Final score calculation, rounded up to ensure even small threats are surfaced
         final_score = min(math.ceil(total_weighted_score), 100)

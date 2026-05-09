@@ -6,8 +6,7 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "urlFetchWhitelist": [
-    "https://*.ngrok-free.app/",
-    "https://*.ngrok-free.dev/"
+       "https://*.railway.app/"
   ],
   "oauthScopes": [
     "https://www.googleapis.com/auth/gmail.addons.execute",

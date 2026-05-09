@@ -79,7 +79,7 @@ class BaseDetector(ABC):
 
 class AuthenticationDetector(BaseDetector):
 
-    def analyze(self, subject, sender, reply_to, body, spf, dkim) -> DetectionResult:
+    def analyze(self, subject, sender, reply_to, body, spf, dkim, **kwargs) -> DetectionResult: 
         flags  = []
         passed = []
         score  = 0
@@ -103,6 +103,8 @@ class AuthenticationDetector(BaseDetector):
             score += 25
             
         # return the results 
+        # Cap auth score — auth alone should never push a clean email to MALICIOUS
+        score = min(score, 60)
         return DetectionResult(
             detector_name="Authentication",
             risk_score=min(score, 100),
@@ -143,7 +145,7 @@ class SenderDetector(BaseDetector):
         'yandex.com', 'gmx.com',
     }
 
-    def analyze(self, subject, sender, reply_to, body, spf, dkim) -> DetectionResult:
+    def analyze(self, subject, sender, reply_to, body, spf, dkim, **kwargs) -> DetectionResult:
         flags  = []
         passed = []
         score  = 0
@@ -335,7 +337,7 @@ class ContentDetector(BaseDetector):
         r'\b(dhl|fedex|ups|usps|royal mail).{0,30}(notification|alert|delivery|package)\b',
     ]
 
-    def analyze(self, subject, sender, reply_to, body, spf, dkim) -> DetectionResult:
+    def analyze(self, subject, sender, reply_to, body, spf, dkim, **kwargs) -> DetectionResult:
         flags  = []
         passed = []
         score  = 0
@@ -461,7 +463,7 @@ class LinkDetector(BaseDetector):
         '.doc', '.xls', '.ppt',  
     ]
 
-    def analyze(self, subject, sender, reply_to, body, spf, dkim) -> DetectionResult:
+    def analyze(self, subject, sender, reply_to, body, spf, dkim, safe_browsing_key="", **kwargs) -> DetectionResult: 
         flags  = []
         passed = []
         score  = 0
@@ -521,6 +523,23 @@ class LinkDetector(BaseDetector):
         if mismatch_flags:
             flags.extend(mismatch_flags)
             score += 50
+
+        # Google Safe Browsing API check
+        # Sends all extracted URLs to Google's live threat database.
+        # This is a high-confidence signal — if Google flags a URL as malicious,
+        # it is almost certainly phishing or malware, not a heuristic guess.
+        if safe_browsing_key and full_urls:
+            sb_hits = self._check_safe_browsing(full_urls, safe_browsing_key)
+            if sb_hits:
+                for hit in sb_hits:
+                    threat = hit["threat_type"].replace("_", " ").lower()
+                    flags.append(
+                        "Google Safe Browsing confirmed malicious URL: {} — flagged as {}".format(
+                            hit["url"][:60], threat)
+                    )
+                    score = min(score + 60, 100)
+            else:
+                passed.append("All {} URL(s) passed Google Safe Browsing check".format(len(full_urls)))
 
         return DetectionResult(
             detector_name="Links & URLs",
@@ -619,7 +638,7 @@ class HomoglyphDetector(BaseDetector):
         'rn': 'm', 'm': 'rn',
     }
 
-    def analyze(self, subject, sender, reply_to, body, spf, dkim) -> DetectionResult:
+    def analyze(self, subject, sender, reply_to, body, spf, dkim, **kwargs) -> DetectionResult:
         flags  = []
         passed = []
         score  = 0

@@ -1,10 +1,9 @@
 # main.py
+import os
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-
-
 
 from Engine.scorer import EmailThreatScorer
 from Engine.detector import (
@@ -15,7 +14,7 @@ from Engine.detector import (
     HomoglyphDetector
 )
 
-
+SAFE_BROWSING_KEY = os.environ.get("SAFE_BROWSING_KEY", "")
 app = FastAPI(
     title="Malicious Email Scorer API",
     description="Backend API for Gmail Add-on security analysis"
