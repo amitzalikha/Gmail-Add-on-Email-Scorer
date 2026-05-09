@@ -4,6 +4,7 @@ Malicious Email Scorer
 A real time email threat detection system built as a Gmail Add-on. 
 When you open an email in Gmail, the add-on automatically analyzes it and returns a risk score, a verdict, and a plain-English breakdown of every red flag found.
 
+
 **What It Does**
 
 Scans every email you open in Gmail instantly
@@ -13,29 +14,30 @@ Covers 7 attack categories: phishing links, credential harvesting, financial sca
 
 ---
 
-__Architecture__
-The system has two parts that work together:
-Gmail (browser)
-     │
-     │  opens email → triggers Add-on
-     ▼
+## **System Architecture**
+
+```text
+Gmail (Browser)
+      │
+      │  Opens email → triggers Add-on
+      ▼
 Google Apps Script
-     │
-     │  extracts email data → POST /analyze
-     ▼
+      │
+      │  Extracts email data → POST /analyze
+      ▼
 FastAPI Backend (main.py)
-     │
-     ├── AuthenticationDetector   — SPF / DKIM verification
-     ├── SenderDetector           — display name spoofing, reply-to hijackin
-     ├── ContentDetector          — urgency, sensitive info, CEO fraud, scam language
-     ├── LinkDetector             — suspicious TLDs, shorteners, dangerous files
-     └── HomoglyphDetector        — lookalike domains 
+      │
+      ├── AuthenticationDetector — SPF / DKIM verification
+      ├── SenderDetector         — Display name spoofing, reply-to hijacking
+      ├── ContentDetector        — Urgency, sensitive info, CEO fraud, scam language
+      ├── LinkDetector           — Suspicious TLDs, shorteners, dangerous files
+      └── HomoglyphDetector      — Lookalike domains 
           │
           ▼
-     EmailThreatScorer (scorer.py)
+    EmailThreatScorer (scorer.py)
           │
           ▼
-     JSON response → Gmail Add-on panel
+    JSON Response → Gmail Add-on Panel
 
      
 __Backend (Python / FastAPI)__
@@ -60,6 +62,8 @@ Each detector analyzes one aspect of the email independently and returns a raw r
 | **Domain Integrity** | Detects **Homoglyph** attacks and look-alike domains using character substitution techniques. |
 
 
+
+
 __2. Weighted Score__
 The final risk assessment isn't a simple average. Instead, each detector's score is multiplied by a specific **weight** based on its reliability and impact. This ensures that high-risk indicators (like malicious links) influence the final result more than noisier signals.
 
@@ -72,8 +76,12 @@ The final risk assessment isn't a simple average. Instead, each detector's score
 | **Homoglyph** | **5%** | A rare attack type, but provides near-certainty when a match is found. |
 
 
+
+
 __3. Compounding Bonus__
 When multiple independent detectors fire at the same time, the total score gets a bonus, because **converging signals are stronger evidence than a single signal alone**.
+
+
 
 
 __4. Verdict__
@@ -89,7 +97,6 @@ A SUSPICIOUS escalation also triggers if any non-authentication detector scores 
 **Running the Backend**
 
 Docker
-### Installation & Setup
 
 Build the image:
 
