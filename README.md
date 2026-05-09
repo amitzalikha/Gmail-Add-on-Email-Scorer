@@ -131,18 +131,6 @@ docker run -p 8000:8000 email-scorer
 
 ---
 
-__Project Structure__
-├── main.py              # FastAPI entry point and request model
-├── Dockerfile           # Container definition
-├── Engine/
-│   ├── detector.py      # All 5 detector classes
-│   ├── scorer.py        # Weighted scoring engine and verdict logic
-│   └── constants.py     # Weights, thresholds, and tuning parameters
-├── addon.js             # Gmail Add-on frontend (Google Apps Script)
-└── appsscript.json      # Add-on manifest and OAuth scopes
-
----
-
 ## **Future Roadmap & Potential Extensions**
 
 The current architecture's modularity allows for seamless integration of more advanced security features. Planned or potential enhancements include:
