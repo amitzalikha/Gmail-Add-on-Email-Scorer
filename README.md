@@ -1,17 +1,19 @@
 # Gmail-Add-on-Email-Scorer
 
 Malicious Email Scorer
-A real time email threat detection system built as a Gmail Add-on. 
+**Real-time email threat detection system built as a Gmail Add-on.**
 When you open an email in Gmail, the add-on automatically analyzes it and returns a risk score, a verdict, and a plain-English breakdown of every red flag found.
 
+---
 
 **What It Does**
 
-Scans every email you open in Gmail instantly
-Returns a score from 0 to 100 and one of three verdicts: SAFE, SUSPICIOUS, or MALICIOUS
-Shows exactly which signals triggered the score in plain language
-Covers 7 attack categories: phishing links, credential harvesting, financial scams, CEO fraud / BEC, delivery scams, tech support scams, and homoglyph domain impersonation.
+*   **Instant Scanning:** Scans every email you open in Gmail instantly.
+*   **Dynamic Scoring:** Returns a score from 0 to 100 with a clear verdict: **SAFE**, **SUSPICIOUS**, or **MALICIOUS**.
+*   **Transparent Analysis:** Shows exactly which signals triggered the score in plain language.
+*   **Broad Protection:** Covers 7 attack categories including phishing links, credential harvesting, financial scams, CEO fraud (BEC), delivery scams, tech support scams, and homoglyph domain impersonation.
 
+  
 ---
 
 ## **System Architecture**
@@ -53,19 +55,19 @@ The system is built with a focus on **modularity** and **scalability**. I implem
 ### **Command & Strategy Patterns**
 By decoupling the detection logic from the scoring engine, the system follows the **Open/Closed Principle** it is open for extension but closed for modification.
 
-     ---
 
-__Backend (Python / FastAPI)__
+### **Backend (Python / FastAPI)**
 The backend runs in a Docker container and exposes a single endpoint: POST /analyze. It receives the email data from the Gmail Add-on, runs it through 5 independent detectors, and returns a score with a full breakdown.
 
-__Gmail Add-on (Google Apps Script)__
+
+### **Gmail Add-on (Google Apps Script)**
 The frontend runs inside Gmail as a side panel. When you open an email it extracts the subject, sender, body, and authentication headers, sends them to the backend, and renders the result as a card with ✗ flags and a verdict.
 
 ---
 
-**Scoring Logic**
+# **Scoring Logic**
 
-__1. Detectors__
+### **1. Detectors**
 Each detector analyzes one aspect of the email independently and returns a raw risk score from 0 to 100.
 
 | Detector | Inspection Focus |
@@ -79,7 +81,7 @@ Each detector analyzes one aspect of the email independently and returns a raw r
 
 
 
-__2. Weighted Score__
+### **2. Weighted Score**
 The final risk assessment isn't a simple average. Instead, each detector's score is multiplied by a specific **weight** based on its reliability and impact. This ensures that high-risk indicators (like malicious links) influence the final result more than noisier signals.
 
 | Detector | Weight | Rationale |
@@ -93,7 +95,7 @@ The final risk assessment isn't a simple average. Instead, each detector's score
 
 
 
-__3. Compounding Bonus__
+### **3. Compounding Bonus**
 When multiple independent detectors fire at the same time, the total score gets a bonus, because **converging signals are stronger evidence than a single signal alone**.
 
 
@@ -106,8 +108,6 @@ The final risk level is determined based on the total weighted score:
 | **0 - 24** | **SAFE** | ✅ |
 | **25 - 59** | **SUSPICIOUS** | ⚠️ |
 | **60 - 100** | **MALICIOUS** | 🚨 |
-
----
    
 A SUSPICIOUS escalation also triggers if any non-authentication detector scores ≥ 60 and the total is ≥ 25, even if the weighted total is below the threshold. 
 
@@ -128,6 +128,7 @@ Run the Container:
 ```bash
 docker run -p 8000:8000 email-scorer 
 ```
+
 ---
 
 __Project Structure__
