@@ -21,7 +21,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
-
+import requests
 
 @dataclass
 class DetectionResult:
@@ -523,6 +523,36 @@ class LinkDetector(BaseDetector):
         if mismatch_flags:
             flags.extend(mismatch_flags)
             score += 50
+
+
+    def _check_safe_browsing(self, urls: list[str], api_key: str) -> list[dict]:
+        """
+        Call Google Safe Browsing API v4
+        """
+        if not api_key:
+            return []
+            
+        endpoint = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={api_key}"
+        
+        body = {
+            "client": {"clientId": "malicious-email-scorer", "clientVersion": "1.0.0"},
+            "threatInfo": {
+                "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"],
+                "platformTypes": ["ANY_PLATFORM"],
+                "threatEntryTypes": ["URL"],
+                "threatEntries": [{"url": u} for u in urls[:10]] # limit 10 links
+            }
+        }
+
+        try:
+            response = requests.post(endpoint, json=body, timeout=5)
+            if response.status_code == 200:
+                return response.json().get("matches", [])
+        except Exception as e:
+            print(f"Safe Browsing API error: {e}")
+        
+        return []
+
 
         # Google Safe Browsing API check
         # Sends all extracted URLs to Google's live threat database.
