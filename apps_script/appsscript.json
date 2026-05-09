@@ -6,7 +6,8 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "urlFetchWhitelist": [
-       "https://*.railway.app/"
+       "https://*.railway.app/",
+       "https://*.railway.app/analyze"
   ],
   "oauthScopes": [
     "https://www.googleapis.com/auth/gmail.addons.execute",

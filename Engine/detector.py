@@ -408,10 +408,6 @@ class ContentDetector(BaseDetector):
             score += 20
 
 
-
-
-
-
         # return the results
         return DetectionResult(
             detector_name="Content & Urgency",
@@ -524,6 +520,29 @@ class LinkDetector(BaseDetector):
             flags.extend(mismatch_flags)
             score += 50
 
+       # Google Safe Browsing API check
+        # Sends all extracted URLs to Google's live threat database.
+        # This is a high-confidence signal — if Google flags a URL as malicious,
+        # it is almost certainly phishing or malware, not a heuristic guess.
+        if safe_browsing_key and full_urls:
+            sb_hits = self._check_safe_browsing(full_urls, safe_browsing_key)
+            if sb_hits:
+                for hit in sb_hits:
+                    threat = hit["threat_type"].replace("_", " ").lower()
+                    flags.append(
+                        "Google Safe Browsing confirmed malicious URL: {} — flagged as {}".format(
+                            hit["url"][:60], threat)
+                    )
+                    score = min(score + 60, 100)
+            else:
+                passed.append("All {} URL(s) passed Google Safe Browsing check".format(len(full_urls)))
+
+        return DetectionResult(
+            detector_name="Links & URLs",
+            risk_score=min(score, 100),
+            flags=flags,
+            passed=passed,
+        )
 
     def _check_safe_browsing(self, urls: list[str], api_key: str) -> list[dict]:
         """
