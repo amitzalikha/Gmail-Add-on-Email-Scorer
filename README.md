@@ -38,6 +38,20 @@ FastAPI Backend (main.py)
           │
           ▼
     JSON Response → Gmail Add-on Panel
+```
+
+
+# **Design & Extensibility**
+
+### **Abstract Foundation**
+The system is built with a focus on **modularity** and **scalability**. I implemented an **Abstract Base Class (Detector)** for all analysis engines. This design pattern ensures:
+
+*   **Easy Integration:** Adding a new security check (e.g., AI-based sentiment analysis or Image scanning) is as simple as creating a new class that inherits from the base detector.
+*   **Standardized Output:** Every detector is forced to implement a consistent interface, ensuring the scoring engine can process results without knowing the internal logic of each module.
+*   **Maintainability:** Changes to the scoring logic or a specific detection method can be made in isolation without affecting the rest of the system.
+
+### **Command & Strategy Patterns**
+By decoupling the detection logic from the scoring engine, the system follows the **Open/Closed Principle** it is open for extension but closed for modification.
 
      ---
 
@@ -101,65 +115,21 @@ A SUSPICIOUS escalation also triggers if any non-authentication detector scores 
 
 **Running the Backend**
 
-Docker
+Docker:
 
 Build the image:
 
 ```bash
 docker build -t email-scorer .
+```
 
 Run the Container:
 
 ```bash
 docker run -p 8000:8000 email-scorer 
-
-The API will be available at http://localhost:8000.
-To verify it's running:
-bashcurl http://localhost:8000/
-# {"status": "online", "message": "Email Threat Scorer is active"}
-
-API
-POST /analyze
-Request body:
-json{
-  "subject": "Action Required: Verify your account",
-  "sender": "support@paypa1.xyz",
-  "body": "Please verify your credit card details immediately.",
-  "reply_to": "",
-  "spf": "",
-  "dkim": "",
-  "auth_results": ""
-}
-
-Response:
-json{
-  "score": 81,
-  "verdict": "MALICIOUS",
-  "trust_applied": false,
-  "breakdown": {
-    "content_urgency": { "score": 100, "flags": ["..."] },
-    "links_urls":      { "score": 70,  "flags": ["..."] },
-    "authentication":  { "score": 60,  "flags": ["..."] }
-  }
-}
-
-Gmail Add-on Setup
-
-Open Google Apps Script and create a new project
-Paste the contents of addon.js into Code.gs
-Paste the contents of appsscript.json into the manifest file
-In the Apps Script editor go to Project Settings → Script Properties and add:
-
-Key: BACKEND_URL - Value: your backend URL (e.g. your ngrok URL + /analyze)
-
-
-Go to Deploy → Test deployments to install the add-on in Gmail
-Open any email in Gmail — the add-on panel will appear automatically on the right
-
-
-Note: The backend must be publicly accessible for the Gmail Add-on to reach it. During development you can use ngrok to expose your local Docker container.
-
+```
 ---
+
 __Project Structure__
 ├── main.py              # FastAPI entry point and request model
 ├── Dockerfile           # Container definition
@@ -170,4 +140,23 @@ __Project Structure__
 ├── addon.js             # Gmail Add-on frontend (Google Apps Script)
 └── appsscript.json      # Add-on manifest and OAuth scopes
 
+---
 
+## **Future Roadmap & Potential Extensions**
+
+The current architecture's modularity allows for seamless integration of more advanced security features. Planned or potential enhancements include:
+
+### **1. AI & Machine Learning Integration**
+*   **LLM Analysis:** Integrating a Large Language Model to analyze the semantic meaning of emails, detecting subtle social engineering tactics that regex cannot catch.
+*   **Anomaly Detection:** Training a model on a user's typical communication patterns to flag unusual requests (e.g., a sudden request for a wire transfer from a known contact).
+
+### **2. Advanced Link & File Sandboxing**
+*   **URL Unshortening:** Automatically expanding shortened URLs to inspect the final destination before the user clicks.
+*   **Live Sandbox API:** Integrating with services like VirusTotal or Hybrid Analysis to scan attachments in a virtual environment in real-time.
+
+### **3. Enhanced Identity Intelligence**
+*   **Graph Analysis:** Building a "trust graph" based on previous interactions to lower the risk score for long-term, verified correspondents.
+*   **BIMI Support:** Checking for Brand Indicators for Message Identification to verify official corporate logos in the Gmail UI.
+
+### **4. User Feedback Loop**
+*   **"Report False Positive" Button:** Allowing users to provide feedback directly from the Gmail Add-on, which can be used to fine-tune the detector weights (`scorer.py`) over time.
