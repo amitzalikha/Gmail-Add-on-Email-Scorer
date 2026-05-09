@@ -156,6 +156,10 @@ class EmailThreatScorer:
       # often fail SPF/DKIM but are completely harmless.
       # So we only escalate to SUSPICIOUS if at least one other detector
       # (content, links, sender,...) fires at high confidence (≥60).
+        # Auth failure alone is too noisy, self sent and forwarded emails
+        # often fail SPF/DKIM but are completely harmless.
+        # So we only escalate to SUSPICIOUS if at least one other detector
+        # (content, links, sender,...) fires at high confidence (≥60).
         non_auth_results = {k: v for k, v in results.items() if k != "authentication"}
         high_confidence_non_auth = any(r.risk_score >= 60 for r in non_auth_results.values())
         if high_confidence_non_auth and score >= 25:

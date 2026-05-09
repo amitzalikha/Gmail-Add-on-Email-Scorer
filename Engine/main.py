@@ -28,7 +28,9 @@ class EmailAnalysisRequest(BaseModel):
     reply_to: Optional[str] = None
     spf: Optional[str] = None
     dkim: Optional[str] = None
-
+    auth_results: Optional[str] = None
+    links: Optional[list] = None
+    
 # ─── ENGINE SETUP ────────────────────────────────────────────────────────────
 # Instantiate the detectors once at startup
 active_detectors = [
@@ -56,7 +58,7 @@ async def analyze_email(request: EmailAnalysisRequest):
     try:
         # Convert Pydantic model to dictionary
         email_data = request.dict()
-        
+        email_data["safe_browsing_key"] = SAFE_BROWSING_KEY
         # Process the email through the scoring engine
         report = threat_engine.evaluate_email(email_data)
         
